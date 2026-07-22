@@ -89,15 +89,62 @@
       <span>Settings</span>
       <button id="closeSettings" class="icon-btn" aria-label="Close settings">✕</button>
     </div>
-    <label class="settings-row">
-      <span>Inspection (15s WCA)</span>
-      <input type="checkbox" id="inspectionToggle">
-    </label>
-    <label class="settings-row">
-      <span>Sound cues</span>
-      <input type="checkbox" id="soundToggle" checked>
-    </label>
-    <p class="settings-note">Tap a time in the list to cycle penalty: none → +2 → DNF. Hold to delete.</p>
+
+    <div class="settings-section">
+      <span class="settings-section-title">Timer</span>
+      <label class="settings-row">
+        <span>Inspection (15s WCA)</span>
+        <div class="toggle-wrap"><input type="checkbox" id="inspectionToggle" class="toggle-input"><span class="toggle-track"></span></div>
+      </label>
+      <label class="settings-row">
+        <span>Sound cues</span>
+        <div class="toggle-wrap"><input type="checkbox" id="soundToggle" class="toggle-input" checked><span class="toggle-track"></span></div>
+      </label>
+      <label class="settings-row">
+        <span>Stackmat-style start<br><small class="settings-sub">micro-hold (120ms) instead of 300ms</small></span>
+        <div class="toggle-wrap"><input type="checkbox" id="quickStartToggle" class="toggle-input"><span class="toggle-track"></span></div>
+      </label>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-section-title">Display</span>
+      <label class="settings-row">
+        <span>Auto-rotate 3D cube</span>
+        <div class="toggle-wrap"><input type="checkbox" id="autoRotateToggle" class="toggle-input" checked><span class="toggle-track"></span></div>
+      </label>
+      <label class="settings-row select-row">
+        <span>Timer precision</span>
+        <select id="precisionSelect">
+          <option value="3">0.000 (3 decimals)</option>
+          <option value="2">0.00 (2 decimals)</option>
+          <option value="1">0.0 (1 decimal)</option>
+        </select>
+      </label>
+      <label class="settings-row">
+        <span>Show chart trend line</span>
+        <div class="toggle-wrap"><input type="checkbox" id="chartTrendToggle" class="toggle-input" checked><span class="toggle-track"></span></div>
+      </label>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-section-title">Keyboard</span>
+      <div class="keys-grid">
+        <div class="key-row"><kbd>Space</kbd><span class="key-desc">Hold to arm / release to start / tap to stop</span></div>
+        <div class="key-row"><kbd>Esc</kbd><span class="key-desc">Close settings / dialogs</span></div>
+        <div class="key-row"><kbd>Tab</kbd><span class="key-desc">Navigate penalty: none → +2 → DNF</span></div>
+      </div>
+    </div>
+
+    <div class="settings-section settings-actions">
+      <span class="settings-section-title">Data</span>
+      <div class="btn-row">
+        <button id="exportBtn" class="settings-btn">📤 Export</button>
+        <button id="importBtn" class="settings-btn">📥 Import</button>
+      </div>
+      <input type="file" id="importFileInput" accept=".json" hidden>
+      <button id="resetAllBtn" class="settings-btn settings-btn-danger">🗑️ Reset all data</button>
+    </div>
+
   </div>
 </div>
 

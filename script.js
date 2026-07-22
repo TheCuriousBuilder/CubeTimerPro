@@ -365,6 +365,14 @@ const els = {
   settingsPanel: document.getElementById("settingsPanel"),
   inspectionToggle: document.getElementById("inspectionToggle"),
   soundToggle: document.getElementById("soundToggle"),
+  quickStartToggle: document.getElementById("quickStartToggle"),
+  autoRotateToggle: document.getElementById("autoRotateToggle"),
+  precisionSelect: document.getElementById("precisionSelect"),
+  chartTrendToggle: document.getElementById("chartTrendToggle"),
+  exportBtn: document.getElementById("exportBtn"),
+  importBtn: document.getElementById("importBtn"),
+  importFileInput: document.getElementById("importFileInput"),
+  resetAllBtn: document.getElementById("resetAllBtn"),
 };
 
 function loadData() {
@@ -375,8 +383,18 @@ function loadData() {
 }
 function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
 function loadSettings() {
-  try { return Object.assign({ inspection: false, sound: true }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")); }
-  catch (e) { return { inspection: false, sound: true }; }
+  try {
+    return Object.assign({
+      inspection: false,
+      sound: true,
+      quickStart: false,
+      autoRotate: true,
+      precision: 3,
+      chartTrend: true,
+    }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
+  } catch (e) {
+    return { inspection: false, sound: true, quickStart: false, autoRotate: true, precision: 3, chartTrend: true };
+  }
 }
 function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 
@@ -446,7 +464,8 @@ function armHold() {
 
 function releaseHold(fromInspection) {
   const held = performance.now() - holdStart;
-  if (held < (fromInspection ? 120 : HOLD_THRESHOLD)) {
+  const minHold = fromInspection ? 120 : (settings.quickStart ? 120 : HOLD_THRESHOLD);
+  if (held < minHold) {
     // released too early — cancel
     if (fromInspection) { appState = "inspecting"; els.timerStatus.textContent = "inspecting — hold space when ready"; setTimerClass("state-inspecting"); }
     else { resetToIdle(); }
@@ -630,15 +649,98 @@ els.resetBtn.addEventListener("click", () => {
 function openSettings() {
   els.inspectionToggle.checked = settings.inspection;
   els.soundToggle.checked = settings.sound;
+  els.quickStartToggle.checked = settings.quickStart;
+  els.autoRotateToggle.checked = settings.autoRotate;
+  els.precisionSelect.value = String(settings.precision);
+  els.chartTrendToggle.checked = settings.chartTrend;
   els.settingsPanel.hidden = false;
 }
+function closeSettings() {
+  els.settingsPanel.hidden = true;
+}
 els.settingsBtn.addEventListener("click", openSettings);
-els.closeSettings.addEventListener("click", () => (els.settingsPanel.hidden = true));
-els.settingsPanel.addEventListener("click", (e) => { if (e.target === els.settingsPanel) els.settingsPanel.hidden = true; });
+els.closeSettings.addEventListener("click", closeSettings);
+els.settingsPanel.addEventListener("click", (e) => { if (e.target === els.settingsPanel) closeSettings(); });
 els.inspectionToggle.addEventListener("change", () => { settings.inspection = els.inspectionToggle.checked; saveSettings(); });
 els.soundToggle.addEventListener("change", () => { settings.sound = els.soundToggle.checked; saveSettings(); });
+els.quickStartToggle.addEventListener("change", () => { settings.quickStart = els.quickStartToggle.checked; saveSettings(); });
+els.autoRotateToggle.addEventListener("change", () => {
+  settings.autoRotate = els.autoRotateToggle.checked;
+  cubeViz.autoRotate = settings.autoRotate;
+  saveSettings();
+});
+els.precisionSelect.addEventListener("change", () => {
+  settings.precision = Number(els.precisionSelect.value);
+  saveSettings();
+  // re-render timer display precision
+  if (appState === "running") { /* will update on next tick */ }
+  else { els.timer.textContent = "0." + "0".repeat(settings.precision); }
+});
+els.chartTrendToggle.addEventListener("change", () => { settings.chartTrend = els.chartTrendToggle.checked; saveSettings(); renderChart(data[size]); });
+
+/* ---- escape to close settings ---- */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !els.settingsPanel.hidden) {
+    closeSettings();
+  }
+});
+
+/* ---- export / import / reset all ---- */
+els.exportBtn.addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({ data, settings, version: 1 }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `cubetimer-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+els.importBtn.addEventListener("click", () => els.importFileInput.click());
+els.importFileInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (parsed.data) {
+        data = parsed.data;
+        saveData();
+      }
+      if (parsed.settings) {
+        settings = Object.assign(settings, parsed.settings);
+        saveSettings();
+      }
+      renderAll();
+      closeSettings();
+      alert("Import successful!");
+    } catch (err) {
+      alert("Invalid backup file.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = ""; // reset so same file can be re-imported
+});
+els.resetAllBtn.addEventListener("click", () => {
+  if (confirm("⚠️ Delete ALL solve data for all cube sizes? This cannot be undone.")) {
+    data = { 2: [], 3: [], 4: [], 5: [] };
+    saveData();
+    renderAll();
+    closeSettings();
+  }
+});
 
 /* ---- init ---- */
+// Apply auto-rotate setting on load
+cubeViz.autoRotate = settings.autoRotate;
+// Apply precision
+if (settings.precision !== 3) {
+  const origTick = tickRunning;
+  tickRunning = function() {
+    const elapsed = (performance.now() - runStart) / 1000;
+    els.timer.textContent = elapsed.toFixed(settings.precision);
+    rafId = requestAnimationFrame(tickRunning);
+  };
+}
 els.scramble.textContent = scrambleToString(currentScramble);
 cubeViz.applyMoves(currentScramble, { msPerMove: 85 });
 renderAll();
